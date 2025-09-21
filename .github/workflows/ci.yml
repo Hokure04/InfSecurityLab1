@@ -24,8 +24,22 @@ jobs:
       - name: Run SpotBugs
         run: mvn com.github.spotbugs:spotbugs-maven-plugin:check
 
+      - name: Cache Spotbugs site
+        uses: actions/cache@v4
+        with:
+          path: target/site
+          key: spotbugs-site-${{ hashFiles('pom.xml') }}
+          restore-keys: |
+            spotbugs-site-
+
       - name: Spotbugs site compile
-        run: mvn clean compile site
+        run: |
+          if [ ! -f target/site/spotbugs.html ]; then
+            mvn site -DskipTests
+          else
+            echo "SpotBugs site already cached"
+          fi
+
 
       - name: Upload SpotBugs report
         uses: actions/upload-artifact@v4
