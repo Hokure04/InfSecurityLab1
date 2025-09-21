@@ -1,0 +1,57 @@
+name: Information Security Lab1
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+
+      - name: Run SpotBugs
+        run: mvn com.github.spotbugs:spotbugs-maven-plugin:check
+
+      - name: Spotbugs site compile
+        run: mvn clean compile site
+
+      - name: Upload SpotBugs report
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs-report
+          path: target/site/spotbugs.html
+          if-no-files-found: warn
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Run Snyk test
+        run: snyk test --maven --sarif-file-output=snyk.sarif --json-file-output=snyk.json
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Upload Snyk SARIF report
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-sarif-report
+          path: snyk.sarif
+          if-no-files-found: warn
+
+      - name: Upload Snyk JSON report
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-json-report
+          path: snyk.json
+          if-no-files-found: warn
