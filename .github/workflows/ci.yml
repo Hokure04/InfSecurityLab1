@@ -35,7 +35,7 @@ jobs:
       - name: Spotbugs site compile
         run: |
           if [ ! -f target/site/spotbugs.html ]; then
-            mvn site -DskipTests
+            mvn spotbugs:spotbugs -DskipTests
           else
             echo "SpotBugs site already cached"
           fi
