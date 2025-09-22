@@ -85,7 +85,7 @@ ___
 
 ### Отчёты SAST/SCA
 ___
-Скрины отчётов взяты с последнего успешно пройденного пайплайна: [Успех](https://github.com/Hokure04/InfSecurityLab1/actions/runs/17899904011)
+Скрины отчётов взяты с последнего успешно пройденного пайплайна: [Успех](https://github.com/Hokure04/InfSecurityLab1/actions/runs/17931556477)
 
 Отчёт от SpotBugs:
 ![alt text](image.png)  
