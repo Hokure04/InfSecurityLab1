@@ -1,6 +1,7 @@
 package com.example.infsecuritylab1.filter;
 
 import com.example.infsecuritylab1.exception.AuthorizeException;
+import com.example.infsecuritylab1.exception.BlockedUserException;
 import com.example.infsecuritylab1.exception.JwtTokenExpiredException;
 import com.example.infsecuritylab1.service.JwtService;
 import com.example.infsecuritylab1.service.UserService;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.function.Supplier;
 
 @Component
@@ -53,13 +55,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = userService
                         .getUserDetailsService()
                         .loadUserByUsername(username);
+                if(!userDetails.isEnabled()){
+                    throw new BlockedUserException("Ваш аккаунт заблокирован");
+                }
+
                 if (!jwtService.isTokenValid(jwt, userDetails)){
                     throw new JwtTokenExpiredException("JWT token is invalid or expired");
                 }
 
-                if(!userDetails.isEnabled()){
-                    throw new AuthorizeException("Ваш аккаунт заблокирован");
-                }
+
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
@@ -70,9 +74,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
             filterChain.doFilter(request, response);
-        }catch (JwtTokenExpiredException | UsernameNotFoundException | AuthorizeException e){
-            log.error("Authentication error {}", e.getMessage());
-            throw e;
+        }catch (BlockedUserException e) {
+            log.warn("Blocked user: {}", e.getMessage());
+            writeErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, e.getMessage(), request.getRequestURI());
+        } catch (JwtTokenExpiredException e) {
+            log.warn("Expired JWT: {}", e.getMessage());
+            writeErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, e.getMessage(), request.getRequestURI());
+        } catch (AuthorizeException | UsernameNotFoundException e) {
+            log.warn("Authorization error: {}", e.getMessage());
+            writeErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, e.getMessage(), request.getRequestURI());
         }
+    }
+
+    private void writeErrorResponse(HttpServletResponse response, int status, String message, String path) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        String body = String.format(
+                "{ \"timestamp\": \"%s\", \"status\": %d, \"error\": \"%s\", \"path\": \"%s\" }",
+                LocalDateTime.now(),
+                status,
+                message,
+                path
+        );
+
+        response.getWriter().write(body);
     }
 }
